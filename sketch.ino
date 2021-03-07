@@ -1,26 +1,12 @@
-/* Basic example code for MAX7219 LED dot matrix display with Arduino. More info: https://www.makerguides.com */
+/* Example code for scrolling text and other text effects on MAX7219 LED dot matrix display with Arduino. More info: https://www.makerguides.com */
 
 // Include the required Arduino libraries:
 #include <MD_Parola.h>
 #include <MD_MAX72xx.h>
 #include <SPI.h>
 
-// Define hardware type, size, and output pins:
-#define HARDWARE_TYPE MD_MAX72XX::FC16_HW
-#define MAX_DEVICES 4
-#define CS_PIN 3
-
-// Create a new instance of the MD_Parola class with hardware SPI connection:
-MD_Parola myDisplay = MD_Parola(HARDWARE_TYPE, CS_PIN, MAX_DEVICES);
-
-// Setup for software SPI:
-// #define DATAPIN 2
-// #define CLK_PIN 4
-// MD_Parola myDisplay = MD_Parola(HARDWARE_TYPE, DATA_PIN, CLK_PIN, CS_PIN, MAX_DEVICES);
-
-
-
 int i = 0;
+
 textEffect_t texteffect[] =
 {
   PA_PRINT,
@@ -48,75 +34,80 @@ textEffect_t texteffect[] =
   PA_SLICE,
   PA_SCROLL_DOWN
 };
-char *texteffect_s[] =
-{
-  "PRINT",
-  "SCAN_HORIZ",
-  "SCROLL_LEFT",
-  "WIPE",
-  "SCROLL_UP_LEFT",
-  "SCROLL_UP",
-  "OPENING_CURSOR",
-  "GROW_UP",
-  "MESH",
-  "SCROLL_UP_RIGHT",
-  "BLINDS",
-  "CLOSING",
-  "RANDOM",
-  "GROW_DOWN",
-  "SCAN_VERT",
-  "SCROLL_DOWN_LEFT",
-  "WIPE_CURSOR",
-  "DISSOLVE",
-  "OPENING",
-  "CLOSING_CURSOR",
-  "SCROLL_DOWN_RIGHT",
-  "SCROLL_RIGHT",
-  "SLICE",
-  "SCROLL_DOWN"
-};
+
+// Define hardware type, size, and output pins:
+#define HARDWARE_TYPE MD_MAX72XX::FC16_HW
+#define MAX_DEVICES 4
+#define CS_PIN 3
+
+// Create a new instance of the MD_Parola class with hardware SPI connection:
+MD_Parola myDisplay = MD_Parola(HARDWARE_TYPE, CS_PIN, MAX_DEVICES);
+
+
+// Global message buffers shared by Serial and Scrolling functions
+#define	BUF_SIZE	75
+char curMessage[BUF_SIZE] = { "" };
+char newMessage[BUF_SIZE] = { "Hello!" };
+bool newMessageAvailable = true;
 
 void setup() {
-  // Intialize the object:
+
+  Serial.begin(9600);
+  Serial.print("Type a message\nEnd message line with a newline");
+
   myDisplay.begin();
-  // Set the intensity (brightness) of the display (0-15):
   myDisplay.setIntensity(0);
   myDisplay.setTextAlignment(PA_CENTER);
   myDisplay.setPause(1000);
   myDisplay.setSpeed(100);
-  // Clear the display:
   myDisplay.displayClear();
-  //myDisplay.displayScroll("PAPA MAMA LERA", PA_LEFT, PA_SCROLL_LEFT, 100);
-  //myDisplay.displayText("Papa Mama LERA", PA_CENTER, 100, 0, PA_SCROLL_LEFT, PA_SCROLL_LEFT);
+
+  //myDisplay.displayText(curMessage, PA_CENTER, 100, 2000, texteffect[i], texteffect[i]);
 }
 
+
+void readSerial(void)
+{
+  static char *cp = newMessage;
+
+  while (Serial.available())
+  {
+    *cp = (char)Serial.read();
+    if ((*cp == '\n') || (cp - newMessage >= BUF_SIZE-2)) // end of message character or full buffer
+    {
+      *cp = '\0'; // end the string
+      // restart the index for next filling spree and flag we have a message waiting
+      cp = newMessage;
+      newMessageAvailable = true;
+    }
+    else  // move char pointer to next position
+      cp++;
+  }
+}
+
+
 void loop() {
-//   myDisplay.setTextAlignment(PA_CENTER);
-//   myDisplay.setInvert(false);
-//   myDisplay.displayScroll("PAPA MAMA LERA", PA_LEFT, PA_SCROLL_LEFT, 100);
-//   delay(6000);
-  if (myDisplay.displayAnimate()) {
-    if (i < sizeof(texteffect)) {
+
+
+  if (myDisplay.displayAnimate())
+  {
+    if (newMessageAvailable)
+    {
+      strcpy(curMessage, newMessage);
+      newMessageAvailable = false;
+    }
+    if (i < sizeof(texteffect)) 
+    {
       i++;
     }
-    else {
+    else 
+    {
       i = 0;
     }
-    myDisplay.displayText(texteffect_s[i], myDisplay.getTextAlignment(), myDisplay.getSpeed(), myDisplay.getPause(), texteffect[i], texteffect[i]);
+    myDisplay.displayText(curMessage, PA_CENTER, 100, 2000, texteffect[i], texteffect[i]);
+    Serial.print(curMessage);
     myDisplay.displayReset();
-  }
 
-  //myDisplay.setTextAlignment(PA_LEFT);
-//   myDisplay.print("PAPA");
-//   delay(6000);
-  //myDisplay.setTextAlignment(PA_RIGHT);
-//  myDisplay.print("MAMA");
-//  delay(6000);
-  //myDisplay.setTextAlignment(PA_CENTER);
-  //myDisplay.setInvert(true);
-  //myDisplay.print("Invert");
-  //delay(2000);
-  //myDisplay.setInvert(false);
-  //myDisplay.print(1234);
-  //delay(2000);
+  }
+  readSerial();
 }
