@@ -77,6 +77,7 @@ void readSerial(void)
     {
       *cp = '\0'; // end the string
       // restart the index for next filling spree and flag we have a message waiting
+      
       cp = newMessage;
       newMessageAvailable = true;
     }
@@ -104,8 +105,9 @@ void loop() {
     {
       i = 0;
     }
+    //char test[] = { "SASHA" };
     myDisplay.displayText(curMessage, PA_CENTER, 100, 2000, texteffect[i], texteffect[i]);
-    Serial.print(curMessage);
+    //Serial.print(curMessage);
     myDisplay.displayReset();
 
   }
